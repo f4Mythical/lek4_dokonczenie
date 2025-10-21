@@ -1,21 +1,20 @@
 package com.example.lek4;
 
-import android.widget.TextView;
-
-import java.util.ArrayList;
-
 public class Pytanie {
         private int idobrazek;
-        private  String trescPytania;
-        private  boolean odpowiedzi;
-        private  String podpowiedzi;
-        private  boolean czyOdpOK;
+        private String trescPytania;
+        private boolean odpowiedzi;
+        private String podpowiedzi;
+        private boolean czyOdpOK;
+        private boolean czyWykorzystanaPodpowiedz;
 
         public Pytanie(int idobrazek, String trescPytania, boolean odpowiedzi, String podpowiedzi) {
                 this.idobrazek = idobrazek;
                 this.trescPytania = trescPytania;
                 this.odpowiedzi = odpowiedzi;
                 this.podpowiedzi = podpowiedzi;
+                this.czyOdpOK = false;
+                this.czyWykorzystanaPodpowiedz = false;
         }
 
         public String getTrescPytania() {
@@ -56,5 +55,13 @@ public class Pytanie {
 
         public void setCzyOdpOK(boolean czyOdpOK) {
                 this.czyOdpOK = czyOdpOK;
+        }
+
+        public boolean isCzyWykorzystanaPodpowiedz() {
+                return czyWykorzystanaPodpowiedz;
+        }
+
+        public void setCzyWykorzystanaPodpowiedz(boolean czyWykorzystanaPodpowiedz) {
+                this.czyWykorzystanaPodpowiedz = czyWykorzystanaPodpowiedz;
         }
 }

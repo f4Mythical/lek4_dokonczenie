@@ -1,6 +1,5 @@
 package com.example.lek4;
 
-import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
@@ -10,6 +9,10 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -17,7 +20,6 @@ import androidx.core.view.WindowInsetsCompat;
 
 import java.util.ArrayList;
 
-// Naprawiony licznik bez komentarzy w buttonTak i buttonNie
 public class MainActivity extends AppCompatActivity {
     ArrayList<Pytanie> pytanie = new ArrayList<Pytanie>();
     private TextView textViewtrescPytania;
@@ -28,7 +30,12 @@ public class MainActivity extends AppCompatActivity {
     private Button buttonNastepne;
     private ImageView imageViewObraz;
     private int ilosc = 0;
+
     private int iloscDobrze = 0;
+
+
+    private ActivityResultLauncher<Intent> podpowiedzLauncher;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -46,14 +53,35 @@ public class MainActivity extends AppCompatActivity {
         buttonTak = findViewById(R.id.button5);
         buttonNastepne = findViewById(R.id.button2);
         buttonPodpowiedzi = findViewById(R.id.button);
-        iloscPoprawnychOdpowiedzi=findViewById(R.id.textView2);
-        pytanie.add(new Pytanie(R.drawable.kot1, "czy jest to slodkie?", true, "tak jest to slodkie"));
-        pytanie.add(new Pytanie(R.drawable.kotek2, "czy jest to mega slodkie?", false, "no oczywiscie"));
-        pytanie.add(new Pytanie(R.drawable.kot3, "czy jest to rudy?", true, "jeszcze sie pytasz?"));
+        iloscPoprawnychOdpowiedzi = findViewById(R.id.textView2);
 
-        wyswietlPytanie(ilosc);
-        buttonPodpowiedzi.setText("Podpowiedz");
+        pytanie = Repozytorium1.ZwrocWszystkiePytania();
+
+        podpowiedzLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                (ActivityResult result) -> {
+                    if (result.getResultCode() == RESULT_OK) {
+                        Intent data = result.getData();
+                        if (data != null && data.getBooleanExtra("PODPOWIEDZ_WYKORZYSTANA", false)) {
+                            int numer = data.getIntExtra("NUMERPYTANIA", -1);
+                            if (numer >= 0 && numer < pytanie.size()) {
+                                pytanie.get(numer).setCzyWykorzystanaPodpowiedz(true);
+                            }
+                        }
+                    }
+                });
+
+        if (savedInstanceState == null) {
+            wyswietlPytanie(0);
+        } else {
+            ilosc = savedInstanceState.getInt("NUMERPYTANIA", 0);
+            iloscDobrze = savedInstanceState.getInt("ILOSC_DOBRZE", 0);
+            wyswietlPytanie(ilosc);
+        }
+
         iloscPoprawnychOdpowiedzi.setText(String.valueOf(iloscDobrze));
+
+        buttonPodpowiedzi.setText("Podpowiedz");
         buttonTak.setText("Tak");
         buttonNie.setText("Nie");
         buttonNastepne.setText("Nastepne");
@@ -61,11 +89,20 @@ public class MainActivity extends AppCompatActivity {
         buttonNastepne.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                ilosc++;
-                if (ilosc >= pytanie.size()) {
-                    ilosc = 0;
+                buttonTak.setEnabled(true);
+                buttonNie.setEnabled(true);
+                if (ilosc < pytanie.size() - 1) {
+                    ilosc++;
+                    wyswietlPytanie(ilosc);
+                } else {
+                    buttonTak.setVisibility(View.GONE);
+                    buttonNie.setVisibility(View.GONE);
+                    buttonPodpowiedzi.setVisibility(View.GONE);
+                    buttonNastepne.setVisibility(View.GONE);
+
+                    imageViewObraz.setVisibility(View.GONE);
+                    textViewtrescPytania.setText("Koniec quizu. Twój wynik: " + iloscDobrze);
                 }
-                wyswietlPytanie(ilosc);
             }
         });
 
@@ -82,13 +119,14 @@ public class MainActivity extends AppCompatActivity {
                 sprawdzOdpowiedz(ilosc, false);
             }
         });
+
         buttonPodpowiedzi.setOnClickListener(
                 new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
-                        Intent intent = new Intent(MainActivity.this,PodpowiedzActivity.class);
-                        intent.putExtra("NUMERPYTANIA",ilosc);
-                        startActivity(intent);
+                        Intent intent = new Intent(MainActivity.this, PodpowiedzActivity.class);
+                        intent.putExtra("NUMERPYTANIA", ilosc);
+                        podpowiedzLauncher.launch(intent);
                     }
                 }
         );
@@ -97,20 +135,34 @@ public class MainActivity extends AppCompatActivity {
     private void wyswietlPytanie(int ktorePytanie) {
         textViewtrescPytania.setText(pytanie.get(ktorePytanie).getTrescPytania());
         imageViewObraz.setImageResource(pytanie.get(ktorePytanie).getIdobrazek());
-
+        imageViewObraz.setVisibility(View.VISIBLE);
     }
 
     private void sprawdzOdpowiedz(int ktorePytanie, boolean udzielonaOdpowiedz) {
-        if (pytanie.get(ktorePytanie).isOdpowiedzi() == udzielonaOdpowiedz) {
-            pytanie.get(ktorePytanie).setCzyOdpOK(true);
-            Toast.makeText(this, "dobrze", Toast.LENGTH_SHORT).show();
-            iloscDobrze++;
-            iloscPoprawnychOdpowiedzi.setText(String.valueOf(iloscDobrze));
+        Pytanie p = pytanie.get(ktorePytanie);
 
+        if (p.isOdpowiedzi() == udzielonaOdpowiedz) {
+            if (!p.isCzyOdpOK()) {
+                int punkt = p.isCzyWykorzystanaPodpowiedz() ? 5 : 10;
+                iloscDobrze += punkt;
+                iloscPoprawnychOdpowiedzi.setText(String.valueOf(iloscDobrze));
+            }
+            p.setCzyOdpOK(true);
+            Toast.makeText(this, "dobrze", Toast.LENGTH_SHORT).show();
+            buttonNie.setEnabled(false);
+            buttonTak.setEnabled(false);
         } else {
-            pytanie.get(ktorePytanie).setCzyOdpOK(false);
+            p.setCzyOdpOK(false);
             Toast.makeText(this, "zle", Toast.LENGTH_SHORT).show();
+            buttonNie.setEnabled(false);
+            buttonTak.setEnabled(false);
         }
     }
 
-};
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putInt("NUMERPYTANIA", ilosc);
+        outState.putInt("ILOSC_DOBRZE", iloscDobrze);
+    }
+}

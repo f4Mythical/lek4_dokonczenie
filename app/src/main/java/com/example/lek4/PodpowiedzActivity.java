@@ -1,12 +1,11 @@
 package com.example.lek4;
-import android.annotation.SuppressLint;
+
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -16,11 +15,11 @@ import androidx.core.view.WindowInsetsCompat;
 
 import java.util.ArrayList;
 
-
-
 public class PodpowiedzActivity extends AppCompatActivity {
-private Button buttonCofnac;
- TextView textViewTrescPodpowiedziDo;
+    private Button buttonCofnac;
+    TextView textViewTrescPodpowiedziDo;
+    ImageView imageViewPodpowiedz;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -31,17 +30,24 @@ private Button buttonCofnac;
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
-        int numerPytania =getIntent().getIntExtra("NUMERPYTANIA",0);
+        final int numerPytania = getIntent().getIntExtra("NUMERPYTANIA", 0);
+        ArrayList<Pytanie> pytanie = Repozytorium1.ZwrocWszystkiePytania();
 
-        buttonCofnac=findViewById(R.id.button3);
+        buttonCofnac = findViewById(R.id.button3);
+        imageViewPodpowiedz = findViewById(R.id.imageView3Podpowiedz);
         textViewTrescPodpowiedziDo = findViewById(R.id.tekstDoPodpowiedzi);
-        textViewTrescPodpowiedziDo.setText("Podpowiedz do pytania "+(numerPytania+1));
+        imageViewPodpowiedz.setImageResource(pytanie.get(numerPytania).getIdobrazek());
+        textViewTrescPodpowiedziDo.setText("Podpowiedz do pytania " + (numerPytania + 1) + " " + pytanie.get(numerPytania).getPodpowiedzi());
+        buttonCofnac.setText("Cofnij");
         buttonCofnac.setOnClickListener(
                 new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
-                        Intent intent = new Intent(PodpowiedzActivity.this,MainActivity.class);
-                        startActivity(intent);
+                        Intent data = new Intent();
+                        data.putExtra("NUMERPYTANIA", numerPytania);
+                        data.putExtra("PODPOWIEDZ_WYKORZYSTANA", true);
+                        setResult(RESULT_OK, data);
+                        finish();
                     }
                 }
         );
